@@ -1,0 +1,38 @@
+name: AI Code Review
+on: [ pull_request ]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Extrair diff do PR
+        run: |
+          git fetch origin main
+          git diff origin/main...HEAD > pr.diff
+
+      - name: Chamar GPT-3.5 Turbo
+        id: ai
+        run: |
+          RESPONSE=$( \
+            curl -s https://api.openai.com/v1/chat/completions \
+              -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "model":"gpt-3.5-turbo",
+                "messages":[
+                  {"role":"system","content":"Você é um revisor de código experiente."},
+                  {"role":"user","content":"Analise o diff e comente bugs, violações de estilo e sugestões:\n```'"$(cat pr.diff)"'```"}
+                ],
+                "max_tokens":1024
+              }' \
+          )
+          echo "::set-output name=comments::$RESPONSE"
+
+      - name: Publicar comentários no PR
+        run: |
+          gh pr review ${{ github.event.pull_request.number }} \
+            --comment "${{ steps.ai.outputs.comments }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
