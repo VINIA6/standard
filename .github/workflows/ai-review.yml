@@ -9,8 +9,8 @@ jobs:
 
       - name: Extrair diff do PR
         run: |
-          git fetch origin main
-          git diff origin/main...HEAD > pr.diff
+          git fetch origin master
+          git diff origin/master...HEAD > pr.diff
 
       - name: Chamar GPT-3.5 Turbo
         id: ai
